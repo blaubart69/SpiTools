@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpiTools", "SpiTools\SpiTools.csproj", "{025D4125-03CA-49C6-855F-92EB2DF6C327}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSpiTools", "Test\TestSpiTools.csproj", "{D294FA83-13AE-45C0-A635-F3F6DA29412B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{025D4125-03CA-49C6-855F-92EB2DF6C327}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{025D4125-03CA-49C6-855F-92EB2DF6C327}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{025D4125-03CA-49C6-855F-92EB2DF6C327}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{025D4125-03CA-49C6-855F-92EB2DF6C327}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D294FA83-13AE-45C0-A635-F3F6DA29412B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D294FA83-13AE-45C0-A635-F3F6DA29412B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D294FA83-13AE-45C0-A635-F3F6DA29412B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D294FA83-13AE-45C0-A635-F3F6DA29412B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
