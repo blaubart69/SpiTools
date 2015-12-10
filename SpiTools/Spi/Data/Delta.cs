@@ -39,54 +39,63 @@ namespace Spi.Data
             IEnumerable<B>                  ListB, 
             Func<A,B,DELTA_COMPARE_RESULT>  DeltaComparer, 
             Action<DELTA_STATE,A,B,C>       OnCompared,
-            C                               contex
-            )
+            C                               contex)
         {
-            var IterA = new DeluxeEnumerator<A>(ListA);
-            var IterB = new DeluxeEnumerator<B>(ListB);
+            if (DeltaComparer   == null)  throw new ArgumentNullException("DeltaComparer");
+            if (OnCompared      == null)  throw new ArgumentNullException("OnCompared");
 
-            IterA.MoveNext();   
-            IterB.MoveNext();
+            var IterA = ListA.GetEnumerator();
+            var IterB = ListB.GetEnumerator();
+
+            bool hasMoreA = IterA.MoveNext();   
+            bool hasMoreB = IterB.MoveNext();
+            
             uint CountDifferences = 0;
             uint ItemsProcessed = 0;
 
-            while (IterA.HasMoved || IterB.HasMoved)
+            while (hasMoreA || hasMoreB)
             {
                 DELTA_STATE DeltaState = DELTA_STATE.SAMESAME;
-                if (IterA.HasMoved && IterB.HasMoved)
+                if (hasMoreA && hasMoreB)
                 {
                     DELTA_COMPARE_RESULT CmpResult = DeltaComparer(IterA.Current, IterB.Current);
                     DeltaState = GetDeltaStateFromCompareResult(CmpResult);
-                    DoComparedCallback<A, B, C>(OnCompared, DeltaState, IterA.Current, IterB.Current, contex);
-                    MoveIterators<A,B>(DeltaState, ref IterA, ref IterB);
+                    OnCompared(DeltaState, IterA.Current, IterB.Current, contex);
                 }
-                else if (IterA.HasMoved && !IterB.HasMoved)
+                else if (hasMoreA && !hasMoreB)
                 {
                     DeltaState = DELTA_STATE.DELETE;
-                    DoComparedCallback<A, B, C>(OnCompared, DeltaState, IterA.Current, default(B), contex);
-                    IterA.MoveNext();
+                    OnCompared(DeltaState, IterA.Current, default(B), contex);
                 }
-                else if (!IterA.HasMoved && IterB.HasMoved)
+                else if (!hasMoreA && hasMoreB)
                 {
                     DeltaState = DELTA_STATE.NEW;
-                    DoComparedCallback<A, B, C>(OnCompared, DeltaState, default(A), IterB.Current, contex);
-                    IterB.MoveNext();
+                    OnCompared(DeltaState, default(A), IterB.Current, contex);
                 }
+
                 if (DeltaState != DELTA_STATE.SAMESAME)
                 {
                     CountDifferences += 1;
                 }
+
                 ItemsProcessed += 1;
+
+                switch (DeltaState)
+                {
+                    case DELTA_STATE.SAMESAME:
+                    case DELTA_STATE.MODIFY:
+                        hasMoreA = IterA.MoveNext();
+                        hasMoreB = IterB.MoveNext();
+                        break;
+                    case DELTA_STATE.NEW:
+                        hasMoreB = IterB.MoveNext();
+                        break;
+                    case DELTA_STATE.DELETE:
+                        hasMoreA = IterA.MoveNext();
+                        break;
+                }
             }
             return CountDifferences;
-        }
-        private static void DoComparedCallback<A,B,C>(Action<DELTA_STATE,A,B,C> OnCompared, DELTA_STATE state, A a, B b, C contex)
-        {
-            if (OnCompared == null)
-            {
-                return;
-            }
-            OnCompared(state,a,b,contex);
         }
         private static DELTA_STATE GetDeltaStateFromCompareResult(DELTA_COMPARE_RESULT CmpResult)
         {
@@ -112,23 +121,6 @@ namespace Spi.Data
             }
 
             return DeltaState;
-        }
-        private static void MoveIterators<A,B>(DELTA_STATE state, ref DeluxeEnumerator<A> IterA, ref DeluxeEnumerator<B> IterB)
-        {
-            switch (state)
-            {
-                case DELTA_STATE.SAMESAME:
-                case DELTA_STATE.MODIFY:
-                    IterA.MoveNext();
-                    IterB.MoveNext();
-                    break;
-                case DELTA_STATE.NEW:
-                    IterB.MoveNext();
-                    break;
-                case DELTA_STATE.DELETE:
-                    IterA.MoveNext();
-                    break;
-            }
         }
     }
 }

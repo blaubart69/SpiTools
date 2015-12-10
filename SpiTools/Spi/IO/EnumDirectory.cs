@@ -8,7 +8,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Spi.IO
 {
-    public class Directory
+    public class EnumDirectory
     {
         private struct Internal_DirInfo
         {
@@ -31,7 +31,7 @@ namespace Spi.IO
             public string Dirname  { get { return Dir.ToString(); } }
             public string DirAndFilenameFromStartDir { get { return GetFilenameSinceBaseDir(Dirname, BaseDirLen, FindData.cFileName); } }
             public string Fullname { get { return Dirname + Path.DirectorySeparatorChar + FindData.cFileName; } }
-            public DateTime LastWriteTime { get { return Spi.IO.Misc.ConvertFromFiletime(FindData.ftLastWriteTime.dwHighDateTime, FindData.ftLastWriteTime.dwLowDateTime); } }
+            public DateTime LastWriteTime { get { return Spi.IO.Long.ConvertFromFiletime(FindData.ftLastWriteTime.dwHighDateTime, FindData.ftLastWriteTime.dwLowDateTime); } }
 
             public DirEntry(int LastError, StringBuilder Dirname, Spi.Win32.WIN32_FIND_DATA FindData, int BaseDirLen)
             {
@@ -62,7 +62,7 @@ namespace Spi.IO
         public static IEnumerable<DirEntry> Entries(string startDir, int maxDepth, string[] ExcludeDirs, string[] ExcludeFiles)
         {
             // expand directory to "unicode" convention
-            StringBuilder           dir             = new StringBuilder( Misc.GetLongFilenameNotation(startDir) );
+            StringBuilder           dir             = new StringBuilder( Long.GetLongFilenameNotation(startDir) );
             int                     baseDirLength   = dir.Length;
             SafeFileHandle          SearchHandle    = null;
             Stack<Internal_DirInfo> dirStack        = new Stack<Internal_DirInfo>();
@@ -76,8 +76,6 @@ namespace Spi.IO
                 if (findFirstFile)
                 {
                     findFirstFile = false;
-
-                    
 
                     SearchHandle = Win32.FindFirstFile(dir.ToString() + "\\*", out find_data);
                     if (SearchHandle.IsInvalid)

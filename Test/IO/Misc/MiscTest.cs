@@ -2,6 +2,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
+using Spi.IO;
+
 namespace SpiTest
 {
     
@@ -71,28 +73,28 @@ namespace SpiTest
         [TestMethod()]
         public void GetLongFilenameNotationTest()
         {
-            Assert.AreEqual(@"",                Misc.GetLongFilenameNotation(@""));
-            Assert.AreEqual(@".\dir",           Misc.GetLongFilenameNotation(@".\dir"));
-            Assert.AreEqual(@"\\?\c:\",         Misc.GetLongFilenameNotation(@"c:\"));
-            Assert.AreEqual(@"\\?\c:\bumsti",   Misc.GetLongFilenameNotation(@"c:\bumsti"));
-            Assert.AreEqual(@"\\?\c:\",         Misc.GetLongFilenameNotation(@"\\?\c:\"));
+            Assert.AreEqual(@"",                Long.GetLongFilenameNotation(@""));
+            Assert.AreEqual(@".\dir",           Long.GetLongFilenameNotation(@".\dir"));
+            Assert.AreEqual(@"\\?\c:\",         Long.GetLongFilenameNotation(@"c:\"));
+            Assert.AreEqual(@"\\?\c:\bumsti",   Long.GetLongFilenameNotation(@"c:\bumsti"));
+            Assert.AreEqual(@"\\?\c:\",         Long.GetLongFilenameNotation(@"\\?\c:\"));
 
-            Assert.AreEqual(@"\\?\UNC\server\share", Misc.GetLongFilenameNotation(@"\\server\share"));
-            Assert.AreEqual(@"\\?\UNC\server\share", Misc.GetLongFilenameNotation(@"\\?\UNC\server\share"));
+            Assert.AreEqual(@"\\?\UNC\server\share", Long.GetLongFilenameNotation(@"\\server\share"));
+            Assert.AreEqual(@"\\?\UNC\server\share", Long.GetLongFilenameNotation(@"\\?\UNC\server\share"));
 
         }
         [TestMethod]
         public void CreatePath()
         {
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"g:"));      // "G:" is non-existing!!!!! On my maschine!!!!
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"\\?\c:"));  // return false because it's not a dir
-            Assert.IsTrue(Spi.IO.Misc.CreatePath(@"f:"));       // "{Driveletter}:"  ... is a dir --> ok
-            Assert.IsTrue(Spi.IO.Misc.CreatePath(@"f:\"));      // "{Driveletter}:\" ... is a dir --> ok
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"cc:"));     // "invalid parameter"
-            Assert.IsTrue(Spi.IO.Misc.CreatePath(@"\"));        // is a dir
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"\\?\"));
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"\\?\\"));
-            Assert.IsFalse(Spi.IO.Misc.CreatePath(@"\\?\C"));
+            Assert.IsFalse(Long.CreatePath(@"g:"));      // "G:" is non-existing!!!!! On my maschine!!!!
+            Assert.IsFalse(Long.CreatePath(@"\\?\c:"));  // return false because it's not a dir
+            Assert.IsTrue (Long.CreatePath(@"f:"));       // "{Driveletter}:"  ... is a dir --> ok
+            Assert.IsTrue (Long.CreatePath(@"f:\"));      // "{Driveletter}:\" ... is a dir --> ok
+            Assert.IsFalse(Long.CreatePath(@"cc:"));     // "invalid parameter"
+            Assert.IsTrue (Long.CreatePath(@"\"));        // is a dir
+            Assert.IsFalse(Long.CreatePath(@"\\?\"));
+            Assert.IsFalse(Long.CreatePath(@"\\?\\"));
+            Assert.IsFalse(Long.CreatePath(@"\\?\C"));
 
             internal_CreatePath(@"f:\jucksi\xxx","", PRE_DIR_ACTION.DELETE);
             internal_CreatePath(@"f:\jucksi", "", PRE_DIR_ACTION.DELETE);
@@ -144,7 +146,7 @@ namespace SpiTest
             //
             // THE TEST!!!
             //
-            Assert.IsTrue( Spi.IO.Misc.CreatePath(CompleteDir) );
+            Assert.IsTrue( Long.CreatePath(CompleteDir) );
             Assert.IsTrue( System.IO.Directory.Exists(Shortname) );
 
             DelDir(baseDir);

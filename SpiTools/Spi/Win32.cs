@@ -37,6 +37,7 @@ namespace Spi
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern SafeFileHandle FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+        //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool FindNextFile(SafeFileHandle hFindFile, out WIN32_FIND_DATA lpFindFileData);
