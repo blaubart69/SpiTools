@@ -11,7 +11,7 @@ namespace Spi.IO
         public static string GetPrettyFilesize(ulong Filesize)
         {
             StringBuilder sb = new StringBuilder(50);
-            Win32.StrFormatByteSize((long)Filesize, sb, 50);
+            Spi.Native.Win32.StrFormatByteSize((long)Filesize, sb, 50);
             return sb.ToString();
         }
         /// <summary>
@@ -50,6 +50,22 @@ namespace Spi.IO
                     File.Delete(FileToDel);
                 }
             }
+        }
+		public static bool CalcMD5ofFile(string Filename, out string MD5Hash, out int LastError)
+        {
+            MD5Hash = null;
+            FileStream fs;
+            if ( (LastError = Spi.IO.Long.GetFilestream(Filename, FileAccess.Read, FileShare.Read, FileMode.Open, FileAttributes.Normal, out fs)) != 0 )
+            {
+                return false;
+            }
+
+            using ( fs )
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
+                MD5Hash = BitConverter.ToString( md5.ComputeHash(fs) ).Replace("-","");
+            }
+            return true;
         }
     }
 }

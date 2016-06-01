@@ -25,7 +25,7 @@ namespace Spi.IO
         }
         public static bool IsDirectory(string dir)
         {
-            uint rc = Win32.GetFileAttributes(dir);
+            uint rc = Spi.Native.Win32.GetFileAttributes(dir);
 
             if (rc == uint.MaxValue)
             {
@@ -41,7 +41,7 @@ namespace Spi.IO
         }
         public static int CreateFile(string Longfilename, FileAccess fAccess, FileShare fShare, FileMode fMode, FileAttributes fAttr, out SafeFileHandle handle)
         {
-            handle = Spi.Win32.CreateFileW(Longfilename, fAccess, fShare, IntPtr.Zero, fMode, fAttr, IntPtr.Zero);
+            handle = Spi.Native.Win32.CreateFileW(Longfilename, fAccess, fShare, IntPtr.Zero, fMode, fAttr, IntPtr.Zero);
 
             if (handle.IsInvalid)
             {
@@ -73,13 +73,13 @@ namespace Spi.IO
             {
                 return true;
             }
-            if (Win32.CreateDirectoryW(PathToCreate, IntPtr.Zero))
+            if (Spi.Native.Win32.CreateDirectoryW(PathToCreate, IntPtr.Zero))
             {
                 return true;
             }
 
             bool rc = false;
-            if (Spi.Win32.GetLastWin32Error() == Spi.Win32.ERROR_PATH_NOT_FOUND)
+            if (Spi.Native.Win32.GetLastWin32Error() == Spi.Native.Win32.ERROR_PATH_NOT_FOUND)
             {
                 // not found. try to create the parent dir.
                 int LastPos = PathToCreate.LastIndexOf(System.IO.Path.DirectorySeparatorChar);
@@ -88,7 +88,7 @@ namespace Spi.IO
                     if (rc = CreatePath(PathToCreate.Substring(0, LastPos)))
                     {
                         // parent dir exist/was created
-                        rc = Win32.CreateDirectoryW(PathToCreate, IntPtr.Zero);
+                        rc = Spi.Native.Win32.CreateDirectoryW(PathToCreate, IntPtr.Zero);
                     }
                 }
             }

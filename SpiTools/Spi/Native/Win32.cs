@@ -4,7 +4,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 
-namespace Spi
+namespace Spi.Native
 {
     public static class Win32
     {
@@ -36,14 +36,14 @@ namespace Spi
         public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern SafeFileHandle FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+        public static extern SafeFindHandle FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
         //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool FindNextFile(SafeFileHandle hFindFile, out WIN32_FIND_DATA lpFindFileData);
+        public static extern bool FindNextFile(SafeHandle hFindFile, out WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool FindClose(SafeFileHandle hFindFile);
+        public static extern bool FindClose(SafeHandle hFindFile);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint GetFileAttributes(string lpFileName);
