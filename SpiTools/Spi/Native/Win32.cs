@@ -42,9 +42,13 @@ namespace Spi.Native
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool FindNextFile(SafeHandle hFindFile, out WIN32_FIND_DATA lpFindFileData);
 
+        /*
+         * 2016-06-28 Spindler
+         *  we should use SafeFindHandle.Dispose() instead of a Close() function
+         *  *
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool FindClose(SafeHandle hFindFile);
-
+        */
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern uint GetFileAttributes(string lpFileName);
 

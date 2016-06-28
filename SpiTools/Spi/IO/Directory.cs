@@ -62,7 +62,6 @@ namespace Spi.IO
                     if (!Spi.Native.Win32.FindNextFile(SearchHandle, out find_data))
                     {
                         SearchHandle.Dispose();
-                        //Spi.Native.Win32.FindClose(SearchHandle);
                         StepBack(ref dir, ref dirStack, out SearchHandle, ref depth);
                         continue;
                     }
@@ -137,9 +136,9 @@ namespace Spi.IO
         {
             if (dirStack.Count > 0)
             {
-                Internal_DirInfo di = dirStack.Pop();
-                dir.Length = dir.Length - di.DirnameLength - 1; // remove "\" and the directory name 
-                SearchHandle = di.handle;
+                Internal_DirInfo LastDir = dirStack.Pop();
+                dir.Length = dir.Length - LastDir.DirnameLength - 1; // remove "\" and the directory name 
+                SearchHandle = LastDir.handle;
                 depth--;
             }
             else
