@@ -13,17 +13,17 @@ namespace TestListDiff
         public string Name;
         public int Edition;
 
-        private DELTA_COMPARE_RESULT DeltaTo(BOCmp other)
+        private DIFF_COMPARE_RESULT DeltaTo(BOCmp other)
         {
             int cmp = this.Name.CompareTo(other.Name);
             if (cmp != 0)
             {
-                return cmp < 0 ? DELTA_COMPARE_RESULT.LESS : DELTA_COMPARE_RESULT.GREATER;
+                return cmp < 0 ? DIFF_COMPARE_RESULT.LESS : DIFF_COMPARE_RESULT.GREATER;
             }
             else
             {
                 int cmpEdt = this.Edition.CompareTo(other.Edition);
-                return cmpEdt == 0 ? DELTA_COMPARE_RESULT.EQUAL : DELTA_COMPARE_RESULT.MODIFY;
+                return cmpEdt == 0 ? DIFF_COMPARE_RESULT.EQUAL : DIFF_COMPARE_RESULT.MODIFY;
             }
         }
 
@@ -31,10 +31,10 @@ namespace TestListDiff
         {
             switch( this.DeltaTo(other) )
             {
-                case DELTA_COMPARE_RESULT.EQUAL: return 0;
-                case DELTA_COMPARE_RESULT.LESS: return -1;
-                case DELTA_COMPARE_RESULT.GREATER: return 1;
-                case DELTA_COMPARE_RESULT.MODIFY: return this.Edition.CompareTo(other.Edition);
+                case DIFF_COMPARE_RESULT.EQUAL: return 0;
+                case DIFF_COMPARE_RESULT.LESS: return -1;
+                case DIFF_COMPARE_RESULT.GREATER: return 1;
+                case DIFF_COMPARE_RESULT.MODIFY: return this.Edition.CompareTo(other.Edition);
             }
             throw new Exception("jezan is ollas aus");
         }

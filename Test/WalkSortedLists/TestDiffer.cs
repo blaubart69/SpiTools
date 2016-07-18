@@ -28,10 +28,10 @@ namespace TestListDiff
             };
 
             var result = DoDelta(a, b, out NumberDiffs);
-            var expected = new List<Tuple<DELTA_STATE,BOCmp>>()
+            var expected = new List<Tuple<DIFF_STATE,BOCmp>>()
             {
-                 new Tuple<DELTA_STATE, BOCmp>(DELTA_STATE.DELETE, new BOCmp() { Name="adam", Edition=1 })
-                ,new Tuple<DELTA_STATE, BOCmp>(DELTA_STATE.MODIFY, new BOCmp() { Name="bumsti", Edition=2 })
+                 new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.DELETE, new BOCmp() { Name="adam", Edition=1 })
+                ,new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.MODIFY, new BOCmp() { Name="bumsti", Edition=2 })
             };
 
             Assert.AreEqual<uint>(2, NumberDiffs);
@@ -54,9 +54,9 @@ namespace TestListDiff
             new List<BOCmp>(),
             out NumberDiffs);
 
-            var expected = new List<Tuple<DELTA_STATE, BOCmp>>()
+            var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
             {
-                CrtTup(DELTA_STATE.DELETE, "Hugo", 1)
+                CrtTup(DIFF_STATE.DELETE, "Hugo", 1)
             };
 
             Assert.AreEqual<uint>(1, NumberDiffs);
@@ -74,9 +74,9 @@ namespace TestListDiff
                 out NumberDiffs
             );
 
-            var expected = new List<Tuple<DELTA_STATE, BOCmp>>()
+            var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
             {
-                CrtTup(DELTA_STATE.NEW, "Hugo", 1)
+                CrtTup(DIFF_STATE.NEW, "Hugo", 1)
             };
             Assert.AreEqual<uint>(1, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
@@ -96,9 +96,9 @@ namespace TestListDiff
                 out NumberDiffs
             );
 
-            var expected = new List<Tuple<DELTA_STATE, BOCmp>>()
+            var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
             {
-                CrtTup(DELTA_STATE.MODIFY, "Hugo", 2)
+                CrtTup(DIFF_STATE.MODIFY, "Hugo", 2)
             };
             Assert.AreEqual<uint>(1, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
@@ -112,7 +112,7 @@ namespace TestListDiff
                 out NumberDiffs
             );
 
-            var expected = new List<Tuple<DELTA_STATE, BOCmp>>() { CrtTup(DELTA_STATE.SAMESAME, "Hugo", 1) };
+            var expected = new List<Tuple<DIFF_STATE, BOCmp>>() { CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1) };
             Assert.AreEqual<uint>(0, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
         }
@@ -133,49 +133,49 @@ namespace TestListDiff
                 out NumberDiffs
             );
 
-            var expected = new List<Tuple<DELTA_STATE, BOCmp>>()
+            var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
                 {
-                    CrtTup(DELTA_STATE.SAMESAME, "Hugo", 1),
-                    CrtTup(DELTA_STATE.SAMESAME, "", 2)
+                    CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1),
+                    CrtTup(DIFF_STATE.SAMESAME, "", 2)
                 };
             Assert.AreEqual<uint>(0, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
         }
         // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-        private List<Tuple<DELTA_STATE, BOCmp>> DoDelta(IList<BOCmp> a, IList<BOCmp> b, out uint differences)
+        private List<Tuple<DIFF_STATE, BOCmp>> DoDelta(IList<BOCmp> a, IList<BOCmp> b, out uint differences)
         {
-            var result = new List<Tuple<DELTA_STATE, BOCmp>>();
+            var result = new List<Tuple<DIFF_STATE, BOCmp>>();
 
-            differences = Spi.Data.Delta.WalkSortedLists<BOCmp, BOCmp, object>(a, b,
+            differences = Spi.Data.Diff.DiffSortedEnumerables<BOCmp, BOCmp, object>(a, b,
                 (BOCmp obja, BOCmp objb) =>
                 {
                     int cmp = obja.Name.CompareTo(objb.Name);
                     if (cmp != 0)
                     {
-                        return cmp < 0 ? DELTA_COMPARE_RESULT.LESS : DELTA_COMPARE_RESULT.GREATER;
+                        return cmp < 0 ? DIFF_COMPARE_RESULT.LESS : DIFF_COMPARE_RESULT.GREATER;
                     }
                     else
                     {
                         int cmpEdt = obja.Edition.CompareTo(objb.Edition);
-                        return cmpEdt == 0 ? DELTA_COMPARE_RESULT.EQUAL : DELTA_COMPARE_RESULT.MODIFY;
+                        return cmpEdt == 0 ? DIFF_COMPARE_RESULT.EQUAL : DIFF_COMPARE_RESULT.MODIFY;
                     }
                 },
-               (DELTA_STATE state, BOCmp obja, BOCmp objb, object context) =>
+               (DIFF_STATE state, BOCmp obja, BOCmp objb, object context) =>
                {
                    BOCmp ToAdd = null;
                    switch (state)
                    {
-                       case DELTA_STATE.MODIFY:
-                       case DELTA_STATE.NEW: ToAdd = objb; break;
-                       case DELTA_STATE.DELETE: ToAdd = obja; break;
-                       case DELTA_STATE.SAMESAME: ToAdd = obja; break;
+                       case DIFF_STATE.MODIFY:
+                       case DIFF_STATE.NEW: ToAdd = objb; break;
+                       case DIFF_STATE.DELETE: ToAdd = obja; break;
+                       case DIFF_STATE.SAMESAME: ToAdd = obja; break;
                    }
-                   result.Add(new Tuple<DELTA_STATE, BOCmp>(state, ToAdd));
+                   result.Add(new Tuple<DIFF_STATE, BOCmp>(state, ToAdd));
                },
                new object());
             return result;
         }
-        private bool MyCollAssert(IList<Tuple<DELTA_STATE, BOCmp>> expected, IList<Tuple<DELTA_STATE, BOCmp>> result)
+        private bool MyCollAssert(IList<Tuple<DIFF_STATE, BOCmp>> expected, IList<Tuple<DIFF_STATE, BOCmp>> result)
         {
             if (expected.Count != result.Count)
             {
@@ -203,9 +203,9 @@ namespace TestListDiff
             }
             return true;
         }
-        private Tuple<DELTA_STATE, BOCmp> CrtTup(DELTA_STATE ds, string name, int edt)
+        private Tuple<DIFF_STATE, BOCmp> CrtTup(DIFF_STATE ds, string name, int edt)
         {
-            return new Tuple<DELTA_STATE, BOCmp>(ds, new BOCmp() { Name = name, Edition = edt });
+            return new Tuple<DIFF_STATE, BOCmp>(ds, new BOCmp() { Name = name, Edition = edt });
         }
     }
 }
