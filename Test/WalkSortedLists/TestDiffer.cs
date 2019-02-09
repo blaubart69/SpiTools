@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Spi.Data;
+using Spi;
 
 namespace TestListDiff
 {
@@ -146,21 +146,12 @@ namespace TestListDiff
         {
             var result = new List<Tuple<DIFF_STATE, BOCmp>>();
 
-            differences = Spi.Data.Diff.DiffSortedEnumerables<BOCmp, BOCmp, object>(a, b,
-                (BOCmp obja, BOCmp objb) =>
-                {
-                    int cmp = obja.Name.CompareTo(objb.Name);
-                    if (cmp != 0)
-                    {
-                        return cmp < 0 ? DIFF_COMPARE_RESULT.LESS : DIFF_COMPARE_RESULT.GREATER;
-                    }
-                    else
-                    {
-                        int cmpEdt = obja.Edition.CompareTo(objb.Edition);
-                        return cmpEdt == 0 ? DIFF_COMPARE_RESULT.EQUAL : DIFF_COMPARE_RESULT.MODIFY;
-                    }
-                },
-               (DIFF_STATE state, BOCmp obja, BOCmp objb, object context) =>
+            differences = Spi.Diff.DiffSortedEnumerables(
+                ListA: a,
+                ListB: b,
+                KeyComparer: (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                checkSortOrder: true,
+                OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
                {
                    BOCmp ToAdd = null;
                    switch (state)
@@ -171,8 +162,7 @@ namespace TestListDiff
                        case DIFF_STATE.SAMESAME: ToAdd = obja; break;
                    }
                    result.Add(new Tuple<DIFF_STATE, BOCmp>(state, ToAdd));
-               },
-               new object());
+               });
             return result;
         }
         private bool MyCollAssert(IList<Tuple<DIFF_STATE, BOCmp>> expected, IList<Tuple<DIFF_STATE, BOCmp>> result)
@@ -192,7 +182,11 @@ namespace TestListDiff
                         result[i].Item1,    result[i].Item2.Name,    result[i].Item2.Edition);
                     return false;
                 }
-                if (expected[i].Item2.CompareTo(result[i].Item2) != 0)
+                if (  ! (
+                             expected[i].Item2.Name.Equals(result[i].Item2.Name,StringComparison.OrdinalIgnoreCase) 
+                          && expected[i].Item2.Edition  == result[i].Item2.Edition
+
+                        ))
                 {
                     Assert.Fail("Name/Edt! Idx [{0}] expected [{1}|{2}|{3}] result [{4}|{5}|{6}]",
                         i,

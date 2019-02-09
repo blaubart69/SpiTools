@@ -74,6 +74,7 @@
     <Compile Include="IO\Misc\MiscTest.cs" />
     <Compile Include="WalkSortedLists\BOCmp.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WalkSortedLists\TestDelta.cs" />
     <Compile Include="WalkSortedLists\TestDiffer.cs" />
   </ItemGroup>
   <ItemGroup>
