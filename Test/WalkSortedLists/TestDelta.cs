@@ -16,15 +16,11 @@ namespace DeltaTest
             string[] strings = new string[] { "1", "2", "3" };
 
             uint differences =
-            Diff.DiffSortedEnumerables<int,string, int, string, object, object>(numbers, strings,
-                KeySelectorA: itemA => itemA,
-                KeySelectorB: itemB => itemB,
+            Diff.DiffSortedEnumerables(numbers, strings,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo( int.Parse(stringB) ),
-                AttributeSelectorA: null,
-                AttributeSelectorB: null,
-                AttributeComparer: null,
                 KeySelfComparerA: (int    i, int    k)  => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k)  => String.Compare(i, k),
+                AttributeComparer: null,
                 checkSortOrder: true,
                 OnCompared: (Spi.DIFF_STATE state, int num, string str) =>
                 {
@@ -42,13 +38,9 @@ namespace DeltaTest
             List<string> newItemsInB = new List<string>();
 
             uint differences =
-            Diff.DiffSortedEnumerables<int, string, int, string, object, object>(
+            Diff.DiffSortedEnumerables(
                 numbers, strings,
-                KeySelectorA: itemA => itemA,
-                KeySelectorB: itemB => itemB,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
-                AttributeSelectorA: null,
-                AttributeSelectorB: null,
                 AttributeComparer: null,
                 KeySelfComparerA: (int i, int k) => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k) => String.Compare(i, k),
@@ -75,13 +67,9 @@ namespace DeltaTest
             List<int> delItemsInA = new List<int>();
 
             uint differences =
-            Diff.DiffSortedEnumerables<int, string, int, string, object, object>(
+            Diff.DiffSortedEnumerables(
                 Anumbers, Bstrings,
-                KeySelectorA: itemA => itemA,
-                KeySelectorB: itemB => itemB,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
-                AttributeSelectorA: null,
-                AttributeSelectorB: null,
                 AttributeComparer: null,
                 KeySelfComparerA: (int i, int k) => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k) => String.Compare(i, k),
@@ -115,26 +103,23 @@ namespace DeltaTest
             List<Tuple<double, string>> modList = new List<Tuple<double, string>>();
 
             uint differences =
-            Diff.DiffSortedEnumerables<double, string, double, string, double, string>(
+            Diff.DiffSortedEnumerables(
                 Anumbers, Bstrings,
-                KeySelectorA: itemA => itemA,
-                KeySelectorB: itemB => itemB,
                 KeyComparer: (numberA, stringB) =>
                 {
                     int numberIntA = (int)(numberA);
                     int numberIntB = (int)(double.Parse(stringB));
                     return numberIntA.CompareTo(numberIntB);
                 },
-                AttributeSelectorA: itemA => itemA - Math.Floor(itemA),
-                AttributeSelectorB: strB => 
-                {
-                    string[] parts = strB.Split(',');
-                    return parts.Length == 2 ? parts[1] : String.Empty;
-                },
                 AttributeComparer: (double a, string b) =>
                 {
-                    double dblB = Convert.ToDouble("0," + b);
-                    return a.CompareTo(dblB);
+                    double restA = a - Math.Floor(a);
+
+                    string[] parts = b.Split(',');
+                    string restB = parts.Length == 2 ? parts[1] : String.Empty;
+                    double dblRestB = Convert.ToDouble("0," + restB);
+
+                    return restA.CompareTo(dblRestB);
                 },
                 KeySelfComparerA: (double i, double k) => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k) => String.Compare(i, k),

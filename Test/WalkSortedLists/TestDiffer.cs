@@ -122,21 +122,23 @@ namespace TestListDiff
             var result = DoDelta(
                 new List<BOCmp>()
                 {
+                     new BOCmp() { Name="", Edition=2 },
                      new BOCmp() { Name="Hugo", Edition=1 }
-                    ,new BOCmp() { Name="", Edition=2 }
+                    
                 },
                 new List<BOCmp>() 
-                { 
+                {
+                     new BOCmp() { Name="", Edition=2 },
                      new BOCmp() { Name="Hugo", Edition=1 }
-                    ,new BOCmp() { Name="", Edition=2 }
+                    
                 },
                 out NumberDiffs
             );
 
             var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
                 {
-                    CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1),
-                    CrtTup(DIFF_STATE.SAMESAME, "", 2)
+                    CrtTup(DIFF_STATE.SAMESAME, "", 2),
+                    CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1)
                 };
             Assert.AreEqual<uint>(0, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
@@ -149,7 +151,8 @@ namespace TestListDiff
             differences = Spi.Diff.DiffSortedEnumerables(
                 ListA: a,
                 ListB: b,
-                KeyComparer: (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                KeyComparer:        (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                AttributeComparer:  (BOCmp obja, BOCmp objb) => obja.Edition.CompareTo(objb.Edition),
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
                {

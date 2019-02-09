@@ -5,76 +5,71 @@ namespace Spi
 {
     class DeltaCore
     {
-        public static uint _internal_DiffSortedEnumerables<TA, TB, KA, KB, AA, AB, C>(
-            IEnumerable<TA> ListA,
-            IEnumerable<TB> ListB,
-            Func<TA, KA> KeySelector1,
-            Func<TB, KB> KeySelector2,
-            Func<KA, KB, int> KeyComparer,
-            Func<TA, AA> AttributeSelector1,
-            Func<TB, AB> AttributeSelector2,
-            Func<AA, AB, int> AttributeComparer,
-            Func<KA, KA, int> KeySelfComparer1,
-            Func<KB, KB, int> KeySelfComparer2,
-            Action<DIFF_STATE, TA, TB, C> OnCompared,
+        public static uint _internal_DiffSortedEnumerables<A, B, C>(
+            IEnumerable<A> ListA,
+            IEnumerable<B> ListB,
+            Func<A, B, int> KeyComparerAB,
+            Func<A, B, int> AttributeComparer,
+            Func<A, A, int> KeyComparerA,
+            Func<B, B, int> KeyComparerB,
+            Action<DIFF_STATE, A, B, C> OnCompared,
             bool checkSortOrder,
             C context)
         {
-            if (KeySelector1 == null) throw new ArgumentNullException(nameof(KeySelector1));
-            if (KeySelector2 == null) throw new ArgumentNullException(nameof(KeySelector2));
-            if (KeyComparer == null) throw new ArgumentNullException(nameof(KeyComparer));
+            if (KeyComparerAB == null) throw new ArgumentNullException(nameof(KeyComparerAB));
             if (OnCompared == null) throw new ArgumentNullException(nameof(OnCompared));
 
-            if (checkSortOrder && (KeySelfComparer1 == null || KeySelfComparer2 == null))
+            if (checkSortOrder && (KeyComparerA == null || KeyComparerB == null))
             {
                 throw new Exception("you want to check sortorder but there is no KeySelfComparer specified");
             }
             
-            using (IEnumerator<TA> IterA = ListA.GetEnumerator())
-            using (IEnumerator<TB> IterB = ListB.GetEnumerator())
+            using (IEnumerator<A> IterA = ListA.GetEnumerator())
+            using (IEnumerator<B> IterB = ListB.GetEnumerator())
             {
                 bool hasMoreA = IterA.MoveNext();
                 bool hasMoreB = IterB.MoveNext();
 
                 uint CountDifferences = 0;
 
-                KA LastKeyA = default(KA);
-                KB LastKeyB = default(KB);
-                KA keyA = hasMoreA ? KeySelector1(IterA.Current) : default(KA);
-                KB keyB = hasMoreB ? KeySelector2(IterB.Current) : default(KB);
+                A lastA = default(A);
+                B lastB = default(B);
 
                 while (hasMoreA || hasMoreB)
                 {
-                    DIFF_STATE DeltaState = DIFF_STATE.SAMESAME;
+                    DIFF_STATE DeltaState;
+                    #region delta_state
                     if (hasMoreA && hasMoreB)
                     {
-                        DeltaState = ItemCompareFunc(
-                            KeyComparer(keyA, keyB),
-                            IterA.Current, IterB.Current,
-                            AttributeSelector1, AttributeSelector2, AttributeComparer);
+                        DeltaState = ItemCompareFunc(KeyComparerAB, AttributeComparer, IterA.Current, IterB.Current);
                         OnCompared(DeltaState, IterA.Current, IterB.Current, context);
-                        LastKeyA = keyA;
-                        LastKeyB = keyB;
+                        lastA = IterA.Current;
+                        lastB = IterB.Current;
                     }
                     else if (hasMoreA && !hasMoreB)
                     {
                         DeltaState = DIFF_STATE.DELETE;
-                        OnCompared(DeltaState, IterA.Current, default(TB), context);
-                        LastKeyA = keyA;
-                        LastKeyB = default(KB);
+                        OnCompared(DeltaState, IterA.Current, default(B), context);
+                        lastA = IterA.Current;
+                        lastB = default(B);
                     }
                     else if (!hasMoreA && hasMoreB)
                     {
                         DeltaState = DIFF_STATE.NEW;
-                        OnCompared(DeltaState, default(TA), IterB.Current, context);
-                        LastKeyA = default(KA);
-                        LastKeyB = keyB;
+                        OnCompared(DeltaState, default(A), IterB.Current, context);
+                        lastA = default(A);
+                        lastB = IterB.Current;
                     }
-
+                    else
+                    {
+                        throw new ApplicationException("internal state error. >>!hasMoreA || !hasMoreB<< should not be possible at this time");
+                    }
+                    #endregion
                     if (DeltaState != DIFF_STATE.SAMESAME)
                     {
                         CountDifferences += 1;
                     }
+                    #region move_iterators
                     // move the iterators based on the diff result
                     switch (DeltaState)
                     {
@@ -90,43 +85,41 @@ namespace Spi
                             hasMoreA = IterA.MoveNext();
                             break;
                     }
+                    #endregion
+                    #region check_sort_order
                     if (checkSortOrder)
                     {
                         // check if the sortorder is given and throw an exception if not
                         if (hasMoreA)
                         {
-                            keyA = KeySelector1(IterA.Current);
-                            CheckSortOrderOfItems(KeySelfComparer1, LastKeyA, keyA, 'A');
+                            CheckSortOrderOfItems(KeyComparerA, lastA, IterA.Current, 'A');
                         }
                         if (hasMoreB)
                         {
-                            keyB = KeySelector2(IterB.Current);
-                            CheckSortOrderOfItems(KeySelfComparer2, LastKeyB, keyB, 'B');
+                            CheckSortOrderOfItems(KeyComparerB, lastB, IterB.Current, 'B');
                         }
                     }
+                    #endregion
                 }
                 return CountDifferences;
             }
         }
 
-        private static DIFF_STATE ItemCompareFunc<T1, T2, A1, A2>(
-            int KeyCmpResult,
-            T1 itemA, T2 itemB,
-            Func<T1, A1> attributeSelector1,
-            Func<T2, A2> attributeSelector2,
-            Func<A1, A2, int> attributeComparer)
+        private static DIFF_STATE ItemCompareFunc<A, B>(
+            Func<A, B, int> keyComparer,
+            Func<A, B, int> attributeComparer, 
+            A itemA,
+            B itemB)
         {
-            if (KeyCmpResult == 0)
+            int keyCmpResult = keyComparer(itemA, itemB);
+            if (keyCmpResult == 0)
             {
-                if (attributeSelector1 == null || attributeSelector2 == null)
+                if (attributeComparer == null)
                 {
                     return DIFF_STATE.SAMESAME;
                 }
 
-                A1 attrA = attributeSelector1(itemA);
-                A2 attrB = attributeSelector2(itemB);
-
-                if (attributeComparer(attrA, attrB) == 0)
+                if (attributeComparer(itemA, itemB) == 0)
                 {
                     return DIFF_STATE.SAMESAME;
                 }
@@ -137,19 +130,19 @@ namespace Spi
             }
             else
             {
-                return KeyCmpResult < 0 ? DIFF_STATE.DELETE : DIFF_STATE.NEW;
+                return keyCmpResult < 0 ? DIFF_STATE.DELETE : DIFF_STATE.NEW;
             }
         }
-        private static void CheckSortOrderOfItems<K>(Func<K, K, int> KeyComparer, K lastKey, K currentKey, char WhichList)
+        private static void CheckSortOrderOfItems<K>(Func<K, K, int> KeyComparer, K lastItem, K currItem, char WhichList)
         {
-            if (KeyComparer(lastKey, currentKey) > 0)
+            if (KeyComparer(lastItem, currItem) > 0)
             {
                 throw new ApplicationException(
                     String.Format(
                         "Sortorder not given in list [{0}]. Last item is greater than current item.\nlast [{1}]\ncurr [{2}]",
                         WhichList,
-                        lastKey.ToString(),
-                        currentKey.ToString()));
+                        lastItem.ToString(),
+                        currItem.ToString()));
             }
         }
     }
