@@ -2,12 +2,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-using Spi.IO;
-
 namespace SpiTest
 {
-    
-    
+
+
     /// <summary>
     ///This is a test class for MiscTest and is intended
     ///to contain all MiscTest Unit Tests

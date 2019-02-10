@@ -16,7 +16,7 @@ namespace DeltaTest
             string[] strings = new string[] { "1", "2", "3" };
 
             uint differences =
-            Diff.DiffSortedEnumerables(numbers, strings,
+            DiffAscendingSortedLists.Run(numbers, strings,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo( int.Parse(stringB) ),
                 KeySelfComparerA: (int    i, int    k)  => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k)  => String.Compare(i, k),
@@ -38,7 +38,7 @@ namespace DeltaTest
             List<string> newItemsInB = new List<string>();
 
             uint differences =
-            Diff.DiffSortedEnumerables(
+            DiffAscendingSortedLists.Run(
                 numbers, strings,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
                 AttributeComparer: null,
@@ -47,7 +47,7 @@ namespace DeltaTest
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, int num, string str) =>
                 {
-                    if ( state == DIFF_STATE.NEW)
+                    if ( state == DIFF_STATE.NEW_B)
                     {
                         newItemsInB.Add(str);
                     }
@@ -67,7 +67,7 @@ namespace DeltaTest
             List<int> delItemsInA = new List<int>();
 
             uint differences =
-            Diff.DiffSortedEnumerables(
+            DiffAscendingSortedLists.Run(
                 Anumbers, Bstrings,
                 KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
                 AttributeComparer: null,
@@ -76,11 +76,11 @@ namespace DeltaTest
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, int num, string str) =>
                 {
-                    if (state == DIFF_STATE.NEW)
+                    if (state == DIFF_STATE.NEW_B)
                     {
                         newItemsInB.Add(str);
                     }
-                    else if (state == DIFF_STATE.DELETE)
+                    else if (state == DIFF_STATE.DELETE_A)
                     {
                         delItemsInA.Add(num);
                     }
@@ -103,7 +103,7 @@ namespace DeltaTest
             List<Tuple<double, string>> modList = new List<Tuple<double, string>>();
 
             uint differences =
-            Diff.DiffSortedEnumerables(
+            DiffAscendingSortedLists.Run(
                 Anumbers, Bstrings,
                 KeyComparer: (numberA, stringB) =>
                 {
