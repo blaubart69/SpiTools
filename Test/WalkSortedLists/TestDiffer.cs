@@ -30,7 +30,7 @@ namespace TestListDiff
             var result = DoDelta(a, b, out NumberDiffs);
             var expected = new List<Tuple<DIFF_STATE,BOCmp>>()
             {
-                 new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.DELETE, new BOCmp() { Name="adam", Edition=1 })
+                 new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.DELETE_A, new BOCmp() { Name="adam", Edition=1 })
                 ,new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.MODIFY, new BOCmp() { Name="bumsti", Edition=2 })
             };
 
@@ -56,7 +56,7 @@ namespace TestListDiff
 
             var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
             {
-                CrtTup(DIFF_STATE.DELETE, "Hugo", 1)
+                CrtTup(DIFF_STATE.DELETE_A, "Hugo", 1)
             };
 
             Assert.AreEqual<uint>(1, NumberDiffs);
@@ -76,7 +76,7 @@ namespace TestListDiff
 
             var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
             {
-                CrtTup(DIFF_STATE.NEW, "Hugo", 1)
+                CrtTup(DIFF_STATE.NEW_B, "Hugo", 1)
             };
             Assert.AreEqual<uint>(1, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
@@ -122,21 +122,23 @@ namespace TestListDiff
             var result = DoDelta(
                 new List<BOCmp>()
                 {
+                     new BOCmp() { Name="", Edition=2 },
                      new BOCmp() { Name="Hugo", Edition=1 }
-                    ,new BOCmp() { Name="", Edition=2 }
+                    
                 },
                 new List<BOCmp>() 
-                { 
+                {
+                     new BOCmp() { Name="", Edition=2 },
                      new BOCmp() { Name="Hugo", Edition=1 }
-                    ,new BOCmp() { Name="", Edition=2 }
+                    
                 },
                 out NumberDiffs
             );
 
             var expected = new List<Tuple<DIFF_STATE, BOCmp>>()
                 {
-                    CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1),
-                    CrtTup(DIFF_STATE.SAMESAME, "", 2)
+                    CrtTup(DIFF_STATE.SAMESAME, "", 2),
+                    CrtTup(DIFF_STATE.SAMESAME, "Hugo", 1)
                 };
             Assert.AreEqual<uint>(0, NumberDiffs);
             Assert.IsTrue(MyCollAssert(expected, result));
@@ -146,10 +148,11 @@ namespace TestListDiff
         {
             var result = new List<Tuple<DIFF_STATE, BOCmp>>();
 
-            differences = Spi.Diff.DiffSortedEnumerables(
+            differences = Spi.DiffAscendingSortedLists.Run(
                 ListA: a,
                 ListB: b,
-                KeyComparer: (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                KeyComparison:      (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                AttributeComparer:  (BOCmp obja, BOCmp objb) => obja.Edition.Equals(objb.Edition),
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
                {
@@ -157,8 +160,8 @@ namespace TestListDiff
                    switch (state)
                    {
                        case DIFF_STATE.MODIFY:
-                       case DIFF_STATE.NEW: ToAdd = objb; break;
-                       case DIFF_STATE.DELETE: ToAdd = obja; break;
+                       case DIFF_STATE.NEW_B: ToAdd = objb; break;
+                       case DIFF_STATE.DELETE_A: ToAdd = obja; break;
                        case DIFF_STATE.SAMESAME: ToAdd = obja; break;
                    }
                    result.Add(new Tuple<DIFF_STATE, BOCmp>(state, ToAdd));
