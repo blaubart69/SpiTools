@@ -227,7 +227,7 @@ namespace Spi
             Func<A, B, int> AttributeComparer,
             Func<A, A, int> KeySelfComparerA,
             Func<B, B, int> KeySelfComparerB,
-            Action<A>       OnDeletedA,
+            Action<A>       OnDeleteA,
             Action<B>       OnNewB,
             Action<A, B>    OnModified,
             Action<A, B>    OnSameSame,
@@ -247,8 +247,8 @@ namespace Spi
                         {
                             case DIFF_STATE.SAMESAME: OnSameSame?.Invoke(a, b); break;
                             case DIFF_STATE.MODIFY:   OnModified?.Invoke(a, b); break;
-                            case DIFF_STATE.NEW_B:    OnNewB?.Invoke(b);        break;
-                            case DIFF_STATE.DELETE_A: OnDeletedA?.Invoke(a);    break;
+                            case DIFF_STATE.NEW_B:    OnNewB?    .Invoke(b);    break;
+                            case DIFF_STATE.DELETE_A: OnDeleteA? .Invoke(a);    break;
                         }
                     },
                     checkSortOrder: checkSortOrder,
