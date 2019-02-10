@@ -115,7 +115,7 @@ namespace Spi
             }
         }
         private static DIFF_STATE ItemCompareFunc<A, B>(
-            in Comparison<A,B>    keyComparer,
+            in Comparison<A,B>              keyComparer,
             in AttributeEqualsHandler<A,B>  attributesEqual,
             in A                            itemA,
             in B                            itemB)
@@ -161,7 +161,7 @@ namespace Spi
             bool                        checkSortOrder)
         {
             Comparison<T,T> KeySameTypeComparer = (T keyA, T keyB) => KeyComparison(keyA, keyB);
-            Comparison<T>             keySelfComparer     = (T a, T b)       => KeyComparison(a, b);
+            Comparison<T>   keySelfComparer     = (T a, T b)       => KeyComparison(a, b);
 
             AttributeEqualsHandler<T,T> AttrSameTypeComparer;
             if ( AttributeComparer == null )
@@ -218,7 +218,7 @@ namespace Spi
         public static uint Run<A, B>(
             IEnumerable<A>              ListA,
             IEnumerable<B>              ListB,
-            Comparison<A,B>   KeyComparison,
+            Comparison<A,B>             KeyComparison,
             AttributeEqualsHandler<A,B> AttributeComparer,
             Comparison<A>               KeySelfComparerA,
             Comparison<B>               KeySelfComparerB,
