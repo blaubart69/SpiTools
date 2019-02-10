@@ -151,8 +151,8 @@ namespace TestListDiff
             differences = Spi.DiffAscendingSortedLists.Run(
                 ListA: a,
                 ListB: b,
-                KeyComparer:        (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
-                AttributeComparer:  (BOCmp obja, BOCmp objb) => obja.Edition.CompareTo(objb.Edition),
+                KeyComparison:      (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                AttributeComparer:  (BOCmp obja, BOCmp objb) => obja.Edition.Equals(objb.Edition),
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
                {

@@ -12,23 +12,26 @@ namespace Spi
     }
     public class DiffAscendingSortedLists
     {
+        public delegate int  Comparison            <A, B>(A objA, B objB);
+        public delegate bool AttributeEqualsHandler<A, B>(A objA, B objB);
+
         public static uint Run<A, B, C>(
-            in IEnumerable<A> ListA,
-            in IEnumerable<B> ListB,
-            in Func<A, B, int> KeyComparerAB,
-            in Func<A, B, int> AttributeComparer,
-            in Func<A, A, int> KeyComparerA,
-            in Func<B, B, int> KeyComparerB,
-            in Action<DIFF_STATE, A, B, C> OnCompared,
-            in bool checkSortOrder,
-            in C context)
+            in IEnumerable<A>                ListA,
+            in IEnumerable<B>                ListB,
+            in Comparison<A, B>              KeyComparisonAB,
+            in AttributeEqualsHandler<A, B>  AttributeEquals,
+            in Comparison<A>                 KeyComparerA,
+            in Comparison<B>                 KeyComparerB,
+            in Action<DIFF_STATE, A, B, C>   OnCompared,
+            in bool                          checkSortOrder,
+            in C                             context)
         {
-            if (KeyComparerAB == null) throw new ArgumentNullException(nameof(KeyComparerAB));
-            if (OnCompared    == null) throw new ArgumentNullException(nameof(OnCompared));
+            if (KeyComparisonAB == null) throw new ArgumentNullException(nameof(KeyComparisonAB));
+            if (OnCompared      == null) throw new ArgumentNullException(nameof(OnCompared));
 
             if (checkSortOrder && (KeyComparerA == null || KeyComparerB == null))
             {
-                throw new Exception("you want to check sortorder but there is no KeyComparerA or KeyComparerB specified");
+                throw new ArgumentNullException("you want to check sortorder but there is no KeyComparerA or KeyComparerB specified");
             }
 
             using (IEnumerator<A> IterA = ListA.GetEnumerator())
@@ -48,7 +51,7 @@ namespace Spi
                     #region delta_state
                     if (hasMoreA && hasMoreB)
                     {
-                        DeltaState = ItemCompareFunc(KeyComparerAB, AttributeComparer, IterA.Current, IterB.Current);
+                        DeltaState = ItemCompareFunc(KeyComparisonAB, AttributeEquals, IterA.Current, IterB.Current);
                         OnCompared(DeltaState, IterA.Current, IterB.Current, context);
                         lastA = IterA.Current;
                         lastB = IterB.Current;
@@ -112,34 +115,31 @@ namespace Spi
             }
         }
         private static DIFF_STATE ItemCompareFunc<A, B>(
-            in Func<A, B, int> keyComparer,
-            in Func<A, B, int> attributeComparer,
-            in A itemA,
-            in B itemB)
+            in Comparison<A,B>    keyComparer,
+            in AttributeEqualsHandler<A,B>  attributesEqual,
+            in A                            itemA,
+            in B                            itemB)
         {
             int keyCmpResult = keyComparer(itemA, itemB);
             if (keyCmpResult == 0)
             {
-                if (attributeComparer == null)
+                if (attributesEqual == null)
                 {
                     return DIFF_STATE.SAMESAME;
                 }
 
-                if (attributeComparer(itemA, itemB) == 0)
-                {
-                    return DIFF_STATE.SAMESAME;
-                }
-                else
-                {
-                    return DIFF_STATE.MODIFY;
-                }
+                return attributesEqual(itemA, itemB) ? DIFF_STATE.SAMESAME : DIFF_STATE.MODIFY;                
             }
             else
             {
                 return keyCmpResult < 0 ? DIFF_STATE.DELETE_A : DIFF_STATE.NEW_B;
             }
         }
-        private static void CheckSortOrderOfItems<K>(in Func<K, K, int> KeyComparer, in K lastItem, in K currItem, in char WhichList)
+        private static void CheckSortOrderOfItems<K>(
+            in Comparison<K>    KeyComparer, 
+            in K                lastItem, 
+            in K                currItem, 
+            in char             WhichList)
         {
             if (KeyComparer(lastItem, currItem) > 0)
             {
@@ -153,92 +153,87 @@ namespace Spi
         }
         #region OVERLOADING
         public static uint Run<T>(
-            IEnumerable<T> ListA,
-            IEnumerable<T> ListB,
-            Comparison<T> KeyComparer,
-            Action<DIFF_STATE, T, T> OnCompared,
-            bool checkSortOrder)
-        {
-            return
-                Run<T>(ListA, ListB,
-                KeyComparer: KeyComparer,
-                AttributeComparer: null,
-                OnCompared: OnCompared,
-                checkSortOrder: checkSortOrder);
-        }
-       
-        public static uint Run<T>(
             IEnumerable<T>              ListA,
             IEnumerable<T>              ListB,
-            Comparison<T>               KeyComparer,
-            Comparison<T>               AttributeComparer,
+            Comparison<T>               KeyComparison,
+            AttributeEqualsHandler<T,T> AttributeComparer,
             Action<DIFF_STATE, T, T>    OnCompared,
             bool                        checkSortOrder)
         {
-            Func<T, T, int> KeySameTypeComparer = (T keyA, T keyB) => KeyComparer(keyA, keyB);
+            Comparison<T,T> KeySameTypeComparer = (T keyA, T keyB) => KeyComparison(keyA, keyB);
+            Comparison<T>             keySelfComparer     = (T a, T b)       => KeyComparison(a, b);
 
-            Func<T, T, int> AttrSameTypeComparer;
+            AttributeEqualsHandler<T,T> AttrSameTypeComparer;
             if ( AttributeComparer == null )
             {
-                AttrSameTypeComparer = (Func<T, T, int>)null;
+                AttrSameTypeComparer = null;
             }
             else
             {
-                AttrSameTypeComparer = 
-                    (T attrA, T attrB) => AttributeComparer(attrA, attrB);
+                AttrSameTypeComparer = (T attrA, T attrB) => AttributeComparer(attrA, attrB);
             }
 
             return
                 Run<T,T>(
                     ListA, ListB,
-                    KeyComparer:        KeySameTypeComparer,
+                    KeyComparison:      KeySameTypeComparer,
                     AttributeComparer:  AttrSameTypeComparer,
-                    KeySelfComparerA:   KeySameTypeComparer,
-                    KeySelfComparerB:   KeySameTypeComparer,
+                    KeySelfComparerA:   keySelfComparer,
+                    KeySelfComparerB:   keySelfComparer,
                     OnCompared:         OnCompared,
                     checkSortOrder:     checkSortOrder);
         }
         public static uint Run<A, B>(
-            IEnumerable<A> ListA,
-            IEnumerable<B> ListB,
-            Func<A, B, int> KeyComparer,
-            Func<A, B, int> AttributeComparer,
-            Func<A, A, int> KeySelfComparerA,
-            Func<B, B, int> KeySelfComparerB,
-            Action<DIFF_STATE, A, B> OnCompared,
-            bool checkSortOrder)
+            IEnumerable<A>                  ListA,
+            IEnumerable<B>                  ListB,
+            Comparison<A, B>                KeyComparison,
+            AttributeEqualsHandler<A, B>    AttributeComparer,
+            Comparison<A>                   KeySelfComparerA,
+            Comparison<B>                   KeySelfComparerB,
+            Action<DIFF_STATE, A, B>        OnCompared,
+            bool                            checkSortOrder)
         {
+            Action<DIFF_STATE, A, B, object> tmpOnCompared;
+            if ( OnCompared == null)
+            {
+                tmpOnCompared = null;
+            }
+            else
+            {
+                tmpOnCompared = (state, a, b, ctx) => OnCompared(state, a, b);
+            }
+
             return
                 DiffAscendingSortedLists.Run<A, B, object>(
                     ListA, 
                     ListB,
-                    KeyComparerAB:      KeyComparer,
-                    AttributeComparer:  AttributeComparer,
+                    KeyComparisonAB:    KeyComparison,
+                    AttributeEquals:    AttributeComparer,
                     KeyComparerA:       KeySelfComparerA,
                     KeyComparerB:       KeySelfComparerB,
-                    OnCompared:         (state, a, b, ctx) => OnCompared(state, a, b),
+                    OnCompared:         tmpOnCompared,
                     checkSortOrder:     checkSortOrder,
                     context:            null);
         }
         public static uint Run<A, B>(
-            IEnumerable<A>  ListA,
-            IEnumerable<B>  ListB,
-            Func<A, B, int> KeyComparer,
-            Func<A, B, int> AttributeComparer,
-            Func<A, A, int> KeySelfComparerA,
-            Func<B, B, int> KeySelfComparerB,
-            Action<A>       OnDeleteA,
-            Action<B>       OnNewB,
-            Action<A, B>    OnModified,
-            Action<A, B>    OnSameSame,
+            IEnumerable<A>              ListA,
+            IEnumerable<B>              ListB,
+            Comparison<A,B>   KeyComparison,
+            AttributeEqualsHandler<A,B> AttributeComparer,
+            Comparison<A>               KeySelfComparerA,
+            Comparison<B>               KeySelfComparerB,
+            Action<A>                   OnDeleteA,
+            Action<B>                   OnNewB,
+            Action<A, B>                OnModified,
+            Action<A, B>                OnSameSame,
             bool checkSortOrder)
         {
             return
                 DiffAscendingSortedLists.Run<A, B, object>(
                     ListA,
                     ListB,
-                    KeyComparerAB:      KeyComparer,
-                    AttributeComparer:  AttributeComparer,
+                    KeyComparisonAB:    KeyComparison,
+                    AttributeEquals:    AttributeComparer,
                     KeyComparerA:       KeySelfComparerA,
                     KeyComparerB:       KeySelfComparerB,
                     OnCompared: (state, a, b, ctx) =>

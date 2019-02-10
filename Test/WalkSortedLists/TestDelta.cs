@@ -10,14 +10,82 @@ namespace DeltaTest
     public class TestDelta
     {
         [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException),"A keyComparison of null was inappropriately allowed.")]
+        public void KeyComparisonNullException()
+        {
+            int[] numbers = new int[] { 1, 2, 3 };
+            string[] strings = new string[] { "1", "2", "3" };
+
+            DiffAscendingSortedLists.Run<int,string>(
+                ListA: numbers, 
+                ListB: strings, 
+                KeyComparison: null, 
+                KeySelfComparerA: null, 
+                KeySelfComparerB: null, 
+                AttributeComparer: null,
+                checkSortOrder: false, 
+                OnCompared: null);
+        }
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException), "A OnCompared callback of null was inappropriately allowed.")]
+        public void OnComparedNullException()
+        {
+            int[] numbers = new int[] { 1, 2, 3 };
+            string[] strings = new string[] { "1", "2", "3" };
+
+            DiffAscendingSortedLists.Run<int, string>(
+                ListA: numbers,
+                ListB: strings,
+                KeyComparison: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
+                KeySelfComparerA: null,
+                KeySelfComparerB: null,
+                AttributeComparer: null,
+                checkSortOrder: false,
+                OnCompared: null);
+        }
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException), "A KeySelfComparer callback of null was inappropriately allowed.")]
+        public void SelfComparerNullExceptionButCheckSortOrderTrue()
+        {
+            int[] numbers = new int[] { 1, 2, 3 };
+            string[] strings = new string[] { "1", "2", "3" };
+
+            DiffAscendingSortedLists.Run<int, string>(
+                ListA: numbers,
+                ListB: strings,
+                KeyComparison: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
+                KeySelfComparerA: null,
+                KeySelfComparerB: null,
+                AttributeComparer: null,
+                checkSortOrder: true,
+                OnCompared: (state, num, str) => { });
+        }
+        [TestMethod]
+        public void NoExceptionWhenSelfComparerIsNullButSortOrderIsFalse()
+        {
+            int[] numbers = new int[] { 1, 2, 3 };
+            string[] strings = new string[] { "1", "2", "3" };
+
+            DiffAscendingSortedLists.Run<int, string>(
+                ListA: numbers,
+                ListB: strings,
+                KeyComparison: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
+                KeySelfComparerA: null,
+                KeySelfComparerB: null,
+                AttributeComparer: null,
+                checkSortOrder: false,
+                OnCompared: (state, num, str) => { });
+        }
+
+        [TestMethod]
         public void TwoDifferentTypesButAllTheSame()
         {
             int[] numbers = new int[] { 1, 2, 3 };
             string[] strings = new string[] { "1", "2", "3" };
 
             uint differences =
-            DiffAscendingSortedLists.Run(numbers, strings,
-                KeyComparer: (numberA, stringB) => numberA.CompareTo( int.Parse(stringB) ),
+            DiffAscendingSortedLists.Run<int,string>(numbers, strings,
+                KeyComparison: (numberA, stringB) => numberA.CompareTo( int.Parse(stringB) ),
                 KeySelfComparerA: (int    i, int    k)  => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k)  => String.Compare(i, k),
                 AttributeComparer: null,
@@ -38,12 +106,12 @@ namespace DeltaTest
             List<string> newItemsInB = new List<string>();
 
             uint differences =
-            DiffAscendingSortedLists.Run(
+            DiffAscendingSortedLists.Run<int,string>(
                 numbers, strings,
-                KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
+                KeyComparison: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
                 AttributeComparer: null,
-                KeySelfComparerA: (int i, int k) => i.CompareTo(k),
-                KeySelfComparerB: (string i, string k) => String.Compare(i, k),
+                KeySelfComparerA: (int    i, int    k)  => i.CompareTo(k),
+                KeySelfComparerB: (string i, string k)  => String.Compare(i, k),
                 checkSortOrder: true,
                 OnCompared: (DIFF_STATE state, int num, string str) =>
                 {
@@ -67,9 +135,9 @@ namespace DeltaTest
             List<int> delItemsInA = new List<int>();
 
             uint differences =
-            DiffAscendingSortedLists.Run(
+            DiffAscendingSortedLists.Run<int,string>(
                 Anumbers, Bstrings,
-                KeyComparer: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
+                KeyComparison: (numberA, stringB) => numberA.CompareTo(int.Parse(stringB)),
                 AttributeComparer: null,
                 KeySelfComparerA: (int i, int k) => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k) => String.Compare(i, k),
@@ -105,7 +173,7 @@ namespace DeltaTest
             uint differences =
             DiffAscendingSortedLists.Run(
                 Anumbers, Bstrings,
-                KeyComparer: (numberA, stringB) =>
+                KeyComparison: (numberA, stringB) =>
                 {
                     int numberIntA = (int)(numberA);
                     int numberIntB = (int)(double.Parse(stringB));
@@ -119,7 +187,7 @@ namespace DeltaTest
                     string restB = parts.Length == 2 ? parts[1] : String.Empty;
                     double dblRestB = Convert.ToDouble("0," + restB);
 
-                    return restA.CompareTo(dblRestB);
+                    return restA.Equals(dblRestB);
                 },
                 KeySelfComparerA: (double i, double k) => i.CompareTo(k),
                 KeySelfComparerB: (string i, string k) => String.Compare(i, k),
