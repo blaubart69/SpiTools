@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spi\Delta.cs" />
+    <Compile Include="Spi\DeltaV3.cs" />
     <Compile Include="Spi\IO\Directory.cs" />
     <Compile Include="Spi\IO\DirEntry.cs" />
     <Compile Include="Spi\IO\Long.cs" />
