@@ -148,24 +148,33 @@ namespace TestListDiff
         {
             var result = new List<Tuple<DIFF_STATE, BOCmp>>();
 
-            differences = Spi.DiffAscendingSortedLists.Run(
+            differences = 0;
+            uint tmpDiff = 0;
+
+            Spi.DiffAscendingSortedLists.RunSameType(
                 ListA: a,
                 ListB: b,
-                KeyComparison:      (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
-                AttributeComparer:  (BOCmp obja, BOCmp objb) => obja.Edition.Equals(objb.Edition),
+                KeyComparer: (BOCmp obja, BOCmp objb) => obja.Name.CompareTo(objb.Name),
+                AttributeComparer: (BOCmp obja, BOCmp objb, out bool attrCmpResult) => attrCmpResult = obja.Edition.Equals(objb.Edition),
                 checkSortOrder: true,
-                OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
+                OnNewB:      objb                       => { result.Add(new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.NEW_B,    objb)); tmpDiff++; },
+                OnDeleteA:   obja                       => { result.Add(new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.DELETE_A, obja)); tmpDiff++; },
+                OnModified: (obja, objb, attrCmpResult) => { result.Add(new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.MODIFY,   objb)); tmpDiff++; },
+                OnSameSame: (obja, objb)                => { result.Add(new Tuple<DIFF_STATE, BOCmp>(DIFF_STATE.SAMESAME, obja));            } );
+            /*
+            OnCompared: (DIFF_STATE state, BOCmp obja, BOCmp objb) =>
+           {
+               BOCmp ToAdd = null;
+               switch (state)
                {
-                   BOCmp ToAdd = null;
-                   switch (state)
-                   {
-                       case DIFF_STATE.MODIFY:
-                       case DIFF_STATE.NEW_B: ToAdd = objb; break;
-                       case DIFF_STATE.DELETE_A: ToAdd = obja; break;
-                       case DIFF_STATE.SAMESAME: ToAdd = obja; break;
-                   }
-                   result.Add(new Tuple<DIFF_STATE, BOCmp>(state, ToAdd));
-               });
+                   case DIFF_STATE.MODIFY:
+                   case DIFF_STATE.NEW_B: ToAdd = objb; break;
+                   case DIFF_STATE.DELETE_A: ToAdd = obja; break;
+                   case DIFF_STATE.SAMESAME: ToAdd = obja; break;
+               }
+               result.Add(new Tuple<DIFF_STATE, BOCmp>(state, ToAdd));
+           }*/
+            differences = tmpDiff;   
             return result;
         }
         private bool MyCollAssert(IList<Tuple<DIFF_STATE, BOCmp>> expected, IList<Tuple<DIFF_STATE, BOCmp>> result)

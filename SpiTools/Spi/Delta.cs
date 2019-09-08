@@ -3,36 +3,32 @@ using System.Collections.Generic;
 
 namespace Spi
 {
-    public enum DIFF_STATE
+    public static class DiffAscendingSortedLists
     {
-        NEW_B,
-        MODIFY,
-        DELETE_A,
-        SAMESAME
-    }
-    public class DiffAscendingSortedLists
-    {
-        public delegate int  Comparison            <A, B>(A objA, B objB);
-        public delegate bool AttributeEqualsHandler<A, B>(A objA, B objB);
-
-        public static uint Run<A, B, C>(
-            in IEnumerable<A>                ListA,
-            in IEnumerable<B>                ListB,
-            in Comparison<A, B>              KeyComparisonAB,
-            in AttributeEqualsHandler<A, B>  AttributeEquals,
-            in Comparison<A>                 KeyComparerA,
-            in Comparison<B>                 KeyComparerB,
-            in Action<DIFF_STATE, A, B, C>   OnCompared,
-            in bool                          checkSortOrder,
-            in C                             context)
+        private enum DIFF_STATE
         {
-            if (KeyComparisonAB == null) throw new ArgumentNullException(nameof(KeyComparisonAB));
-            if (OnCompared      == null) throw new ArgumentNullException(nameof(OnCompared));
+            NEW_B,
+            MODIFY,
+            DELETE_A,
+            SAMESAME
+        }
 
-            if (checkSortOrder && (KeyComparerA == null || KeyComparerB == null))
-            {
-                throw new ArgumentNullException("you want to check sortorder but there is no KeyComparerA or KeyComparerB specified");
-            }
+        public delegate int  Comparison       <A, B>   (A objA, B objB);
+        public delegate bool AttributeComparer<A, B, D>(A objA, B objB, out D AttrCmpResult);
+
+        public static void Run<A, B, D>(
+            in IEnumerable<A>                   ListA,
+            in IEnumerable<B>                   ListB,
+            in Comparison<A, B>                 KeyComparer,
+            in AttributeComparer<A, B, D>       AttributeComparer,
+            in Action<B>                        OnNewB,
+            in Action<A>                        OnDeleteA,
+            in Action<A, B, D>                  OnModified,
+            in Action<A, B>                     OnSameSame,
+            in Comparison<A>                    KeySortOrderComparerA,
+            in Comparison<B>                    KeySortOrderComparerB)
+        {
+            if (KeyComparer == null) throw new ArgumentNullException(nameof(KeyComparer));
 
             using (IEnumerator<A> IterA = ListA.GetEnumerator())
             using (IEnumerator<B> IterB = ListB.GetEnumerator())
@@ -40,34 +36,30 @@ namespace Spi
                 bool hasMoreA = IterA.MoveNext();
                 bool hasMoreB = IterB.MoveNext();
 
-                uint CountDifferences = 0;
-
-                A lastA = default(A);
-                B lastB = default(B);
+                A lastA = default;
+                B lastB = default;
 
                 while (hasMoreA || hasMoreB)
                 {
                     DIFF_STATE DeltaState;
-                    #region delta_state
+                    D attribCompareResult = default;
+                    #region DELTA_STATE__LASTA__LASTB
                     if (hasMoreA && hasMoreB)
                     {
-                        DeltaState = ItemCompareFunc(KeyComparisonAB, AttributeEquals, IterA.Current, IterB.Current);
-                        OnCompared(DeltaState, IterA.Current, IterB.Current, context);
+                        DeltaState = ItemCompareFunc(KeyComparer, AttributeComparer, IterA.Current, IterB.Current, out attribCompareResult);
                         lastA = IterA.Current;
                         lastB = IterB.Current;
                     }
                     else if (hasMoreA && !hasMoreB)
                     {
                         DeltaState = DIFF_STATE.DELETE_A;
-                        OnCompared(DeltaState, IterA.Current, default(B), context);
                         lastA = IterA.Current;
-                        lastB = default(B);
+                        lastB = default;
                     }
                     else if (!hasMoreA && hasMoreB)
                     {
                         DeltaState = DIFF_STATE.NEW_B;
-                        OnCompared(DeltaState, default(A), IterB.Current, context);
-                        lastA = default(A);
+                        lastA = default;
                         lastB = IterB.Current;
                     }
                     else
@@ -75,10 +67,15 @@ namespace Spi
                         throw new ApplicationException("internal state error. >>!hasMoreA || !hasMoreB<< should not be possible at this time");
                     }
                     #endregion
-                    if (DeltaState != DIFF_STATE.SAMESAME)
+                    #region CALL_THE_CALLBACKS
+                    switch (DeltaState)
                     {
-                        CountDifferences += 1;
+                        case DIFF_STATE.NEW_B:      OnNewB?    .Invoke(IterB.Current);                                      break;
+                        case DIFF_STATE.DELETE_A:   OnDeleteA? .Invoke(IterA.Current);                                      break;
+                        case DIFF_STATE.MODIFY:     OnModified?.Invoke(IterA.Current, IterB.Current, attribCompareResult);  break;
+                        case DIFF_STATE.SAMESAME:   OnSameSame?.Invoke(IterA.Current, IterB.Current);                       break;
                     }
+                    #endregion
                     #region move_iterators
                     // move the iterators based on the diff result
                     switch (DeltaState)
@@ -97,38 +94,38 @@ namespace Spi
                     }
                     #endregion
                     #region check_sort_order
-                    if (checkSortOrder)
+                    // check if the sortorder is given and throw an exception if not
+                    if (KeySortOrderComparerA != null &&hasMoreA)
                     {
-                        // check if the sortorder is given and throw an exception if not
-                        if (hasMoreA)
-                        {
-                            CheckSortOrderOfItems(KeyComparerA, lastA, IterA.Current, 'A');
-                        }
-                        if (hasMoreB)
-                        {
-                            CheckSortOrderOfItems(KeyComparerB, lastB, IterB.Current, 'B');
-                        }
+                        CheckSortOrderOfItems(KeySortOrderComparerA, lastA, IterA.Current, 'A');
+                    }
+                    if (KeySortOrderComparerA != null && hasMoreB)
+                    {
+                        CheckSortOrderOfItems(KeySortOrderComparerB, lastB, IterB.Current, 'B');
                     }
                     #endregion
                 }
-                return CountDifferences;
             }
         }
-        private static DIFF_STATE ItemCompareFunc<A, B>(
-            in Comparison<A,B>              keyComparer,
-            in AttributeEqualsHandler<A,B>  attributesEqual,
-            in A                            itemA,
-            in B                            itemB)
+        private static DIFF_STATE ItemCompareFunc<A,B,D>(
+            in Comparison<A,B>                  keyComparer,
+            in AttributeComparer<A,B,D>         attribComparer,
+            in A                                itemA,
+            in B                                itemB,
+            out D                               attribCompareResult)
         {
+            attribCompareResult = default;
+
             int keyCmpResult = keyComparer(itemA, itemB);
             if (keyCmpResult == 0)
             {
-                if (attributesEqual == null)
+                if (attribComparer == null)
                 {
                     return DIFF_STATE.SAMESAME;
                 }
 
-                return attributesEqual(itemA, itemB) ? DIFF_STATE.SAMESAME : DIFF_STATE.MODIFY;                
+                bool attributesEqual = attribComparer(itemA, itemB, out attribCompareResult);
+                return attributesEqual ? DIFF_STATE.SAMESAME : DIFF_STATE.MODIFY;
             }
             else
             {
@@ -151,103 +148,84 @@ namespace Spi
                         currItem.ToString()));
             }
         }
-        #region OVERLOADING
-        public static uint Run<T>(
-            IEnumerable<T>              ListA,
-            IEnumerable<T>              ListB,
-            Comparison<T>               KeyComparison,
-            AttributeEqualsHandler<T,T> AttributeComparer,
-            Action<DIFF_STATE, T, T>    OnCompared,
-            bool                        checkSortOrder)
+        //
+        // ====================================================================
+        //
+        #region OVERLOADING_SAME_TYPE
+        public static void RunSameType<T,D>(
+            IEnumerable<T>      ListA,
+            IEnumerable<T>      ListB,
+            Comparison<T>       KeyComparer,
+            AttributeComparer<T, T, D> AttributeComparer,
+            Action<T>           OnDeleteA,
+            Action<T>           OnNewB,
+            Action<T, T, D>     OnModified,
+            Action<T, T>        OnSameSame,
+            bool                checkSortOrder)
         {
-            Comparison<T,T> KeySameTypeComparer = (T keyA, T keyB) => KeyComparison(keyA, keyB);
-            Comparison<T>   keySelfComparer     = (T a, T b)       => KeyComparison(a, b);
+            DiffAscendingSortedLists.Comparison<T, T> KeySameTypeComparer   = (T keyA, T keyB)  => KeyComparer(keyA, keyB);
 
-            AttributeEqualsHandler<T,T> AttrSameTypeComparer;
-            if ( AttributeComparer == null )
+            System.Comparison<T> keySortOrderComparer = checkSortOrder ? (T a, T b) => KeyComparer(a, b) : (System.Comparison<T>)null;
+
+            AttributeComparer<T, T, D> AttrSameTypeComparer;
+            if (AttributeComparer == null)
             {
                 AttrSameTypeComparer = null;
             }
             else
             {
-                AttrSameTypeComparer = (T attrA, T attrB) => AttributeComparer(attrA, attrB);
-            }
-
-            return
-                Run<T,T>(
-                    ListA, ListB,
-                    KeyComparison:      KeySameTypeComparer,
-                    AttributeComparer:  AttrSameTypeComparer,
-                    KeySelfComparerA:   keySelfComparer,
-                    KeySelfComparerB:   keySelfComparer,
-                    OnCompared:         OnCompared,
-                    checkSortOrder:     checkSortOrder);
-        }
-        public static uint Run<A, B>(
-            IEnumerable<A>                  ListA,
-            IEnumerable<B>                  ListB,
-            Comparison<A, B>                KeyComparison,
-            AttributeEqualsHandler<A, B>    AttributeComparer,
-            Comparison<A>                   KeySelfComparerA,
-            Comparison<B>                   KeySelfComparerB,
-            Action<DIFF_STATE, A, B>        OnCompared,
-            bool                            checkSortOrder)
-        {
-            Action<DIFF_STATE, A, B, object> tmpOnCompared;
-            if ( OnCompared == null)
-            {
-                tmpOnCompared = null;
-            }
-            else
-            {
-                tmpOnCompared = (state, a, b, ctx) => OnCompared(state, a, b);
-            }
-
-            return
-                DiffAscendingSortedLists.Run<A, B, object>(
-                    ListA, 
-                    ListB,
-                    KeyComparisonAB:    KeyComparison,
-                    AttributeEquals:    AttributeComparer,
-                    KeyComparerA:       KeySelfComparerA,
-                    KeyComparerB:       KeySelfComparerB,
-                    OnCompared:         tmpOnCompared,
-                    checkSortOrder:     checkSortOrder,
-                    context:            null);
-        }
-        public static uint Run<A, B>(
-            IEnumerable<A>              ListA,
-            IEnumerable<B>              ListB,
-            Comparison<A,B>             KeyComparison,
-            AttributeEqualsHandler<A,B> AttributeComparer,
-            Comparison<A>               KeySelfComparerA,
-            Comparison<B>               KeySelfComparerB,
-            Action<A>                   OnDeleteA,
-            Action<B>                   OnNewB,
-            Action<A, B>                OnModified,
-            Action<A, B>                OnSameSame,
-            bool checkSortOrder)
-        {
-            return
-                DiffAscendingSortedLists.Run<A, B, object>(
-                    ListA,
-                    ListB,
-                    KeyComparisonAB:    KeyComparison,
-                    AttributeEquals:    AttributeComparer,
-                    KeyComparerA:       KeySelfComparerA,
-                    KeyComparerB:       KeySelfComparerB,
-                    OnCompared: (state, a, b, ctx) =>
+                AttrSameTypeComparer =
+                    (T attrA, T attrB, out D AttrCmpResult) =>
                     {
-                        switch (state)
-                        {
-                            case DIFF_STATE.SAMESAME: OnSameSame?.Invoke(a, b); break;
-                            case DIFF_STATE.MODIFY:   OnModified?.Invoke(a, b); break;
-                            case DIFF_STATE.NEW_B:    OnNewB?    .Invoke(b);    break;
-                            case DIFF_STATE.DELETE_A: OnDeleteA? .Invoke(a);    break;
-                        }
-                    },
-                    checkSortOrder: checkSortOrder,
-                    context:        null);
+                        return AttributeComparer(attrA, attrB, out AttrCmpResult);
+                    };
+            }
+
+            DiffAscendingSortedLists.Run<T, T, D>(
+                ListA,
+                ListB,
+                KeySameTypeComparer,
+                AttrSameTypeComparer,
+                OnNewB,
+                OnDeleteA,
+                OnModified,
+                OnSameSame,
+                KeySortOrderComparerA: keySortOrderComparer,
+                KeySortOrderComparerB: keySortOrderComparer);
+        }
+        public static void NoModified<T>(
+            in IEnumerable<T>       ListA,
+            in IEnumerable<T>       ListB,
+               System.Comparison<T> KeyComparer,
+            in Action<T>            OnDeleteA,
+            in Action<T>            OnNewB,
+            in Action<T, T>         OnSameSame)
+        {
+            DiffAscendingSortedLists.Comparison<T, T> KeySameTypeComparer = (T keyA, T keyB) => KeyComparer(keyA, keyB);
+
+            NoModified<T,T>(ListA, ListB, KeySameTypeComparer, OnDeleteA, OnNewB, OnSameSame, KeyComparer, KeyComparer);
+        }
+        #endregion
+        #region OVERLOADING_TWO_TYPES
+        public static void NoModified<A,B>(
+            in IEnumerable<A>       ListA,
+            in IEnumerable<B>       ListB,
+            in Comparison<A, B>     KeyComparer,
+            in Action<A>            OnDeleteA,
+            in Action<B>            OnNewB,
+            in Action<A, B>         OnSameSame,
+            in Comparison<A>        KeySortOrderComparerA,
+            in Comparison<B>        KeySortOrderComparerB)
+        {
+            Run<A,B,object>(ListA, ListB, KeyComparer,
+                AttributeComparer: null,
+                OnDeleteA:    OnDeleteA,
+                OnNewB:       OnNewB,
+                OnSameSame:   OnSameSame,
+                OnModified: (a,b,attrResult) => 
+                    throw new Exception("DiffAscendingSortedLists(NoModified)/internal error: as there is no AttributeComparer there should be no OnMofidied"),
+                KeySortOrderComparerA: KeySortOrderComparerA,
+                KeySortOrderComparerB: KeySortOrderComparerB );
         }
         #endregion
     }
